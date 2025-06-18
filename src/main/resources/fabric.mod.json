@@ -9,13 +9,15 @@
   ],
   "contributors": [
     "Pixfumy",
-    "KingContaria",
+    "contaria",
     "Ronkzinho",
     "jan-leila",
     "VoidXWalker"
   ],
   "contact": {
-    "homepage": "https://github.com/wurgo"
+    "homepage": "https://github.com/wurgo",
+    "sources": "https://github.com/Minecraft-Java-Edition-Speedrunning/antiresourcereload",
+    "issues": "https://github.com/Minecraft-Java-Edition-Speedrunning/antiresourcereload/issues"
   },
   "license": "MIT",
   "environment": "client",

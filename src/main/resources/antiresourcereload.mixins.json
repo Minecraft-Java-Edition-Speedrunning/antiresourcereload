@@ -4,11 +4,14 @@
   "package": "me.wurgo.antiresourcereload.mixin",
   "compatibilityLevel": "JAVA_8",
   "client": [
+    "DefaultResourcePackMixin",
     "MinecraftClientMixin",
-    "ServerResourceManagerMixin",
+    "RecipeBookWidgetMixin",
     "RecipeManagerAccess",
     "RecipeManagerMixin",
-    "RecipeBookWidgetMixin"
+    "ServerResourceManagerMixin",
+    "Structure$PalettedBlockInfoListMixin",
+    "StructureManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
