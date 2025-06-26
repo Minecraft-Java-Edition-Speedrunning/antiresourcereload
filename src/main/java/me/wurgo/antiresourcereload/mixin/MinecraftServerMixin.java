@@ -1,11 +1,16 @@
 package me.wurgo.antiresourcereload.mixin;
 
 import com.google.common.collect.Lists;
+import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import me.wurgo.antiresourcereload.AntiResourceReload;
 import net.minecraft.loot.LootManager;
 import net.minecraft.loot.condition.LootConditionManager;
 import net.minecraft.recipe.RecipeManager;
-import net.minecraft.resource.*;
+import net.minecraft.resource.ReloadableResourceManager;
+import net.minecraft.resource.ResourcePackManager;
+import net.minecraft.resource.ResourcePackProfile;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerAdvancementLoader;
 import net.minecraft.server.function.CommandFunctionManager;
@@ -17,42 +22,66 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.List;
 
 @Mixin(MinecraftServer.class)
 public abstract class MinecraftServerMixin {
-    @Shadow protected abstract void reloadDataPacks(LevelProperties levelProperties);
-    @Mutable @Shadow @Final private ReloadableResourceManager dataManager;
-    @Mutable @Shadow @Final private RegistryTagManager tagManager;
-    @Mutable @Shadow @Final private LootConditionManager predicateManager;
-    @Mutable @Shadow @Final private RecipeManager recipeManager;
-    @Mutable @Shadow @Final private LootManager lootManager;
-    @Mutable @Shadow @Final private CommandFunctionManager commandFunctionManager;
-    @Mutable @Shadow @Final private ServerAdvancementLoader advancementLoader;
+    @Shadow
+    @Final
+    private static Logger LOGGER;
 
-    @Shadow @Final private static Logger LOGGER;
-    @Shadow @Final private ResourcePackManager<ResourcePackProfile> dataPackManager;
+    @Shadow
+    @Final
+    private ResourcePackManager<ResourcePackProfile> dataPackManager;
 
-    @Redirect(
+    @Mutable
+    @Shadow
+    @Final
+    private ReloadableResourceManager dataManager;
+    @Mutable
+    @Shadow
+    @Final
+    private RegistryTagManager tagManager;
+    @Mutable
+    @Shadow
+    @Final
+    private LootConditionManager predicateManager;
+    @Mutable
+    @Shadow
+    @Final
+    private RecipeManager recipeManager;
+    @Mutable
+    @Shadow
+    @Final
+    private LootManager lootManager;
+    @Mutable
+    @Shadow
+    @Final
+    private CommandFunctionManager commandFunctionManager;
+    @Mutable
+    @Shadow
+    @Final
+    private ServerAdvancementLoader advancementLoader;
+
+    @WrapOperation(
             method = "loadWorldDataPacks",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/server/MinecraftServer;reloadDataPacks(Lnet/minecraft/world/level/LevelProperties;)V"
             )
     )
-    private void antiresourcereload_cachedReload(MinecraftServer instance, LevelProperties levelProperties) {
-        if (levelProperties.getEnabledDataPacks().size() + levelProperties.getDisabledDataPacks().size() != 0) {
+    private void cachedReload(MinecraftServer server, LevelProperties properties, Operation<Void> original) {
+        if (!properties.getEnabledDataPacks().isEmpty() || !properties.getDisabledDataPacks().isEmpty()) {
             AntiResourceReload.log("Using data-packs, reloading.");
-            this.reloadDataPacks(levelProperties);
+            original.call(server, properties);
             return;
         }
-        
+
         if (AntiResourceReload.dataManager == null) {
             AntiResourceReload.log("Cached resources unavailable, reloading & caching.");
             AntiResourceReload.dataManager = this.dataManager;
-            this.reloadDataPacks(levelProperties);
+            original.call(server, properties);
             AntiResourceReload.tagManager = this.tagManager;
             AntiResourceReload.predicateManager = this.predicateManager;
             AntiResourceReload.recipeManager = this.recipeManager;
@@ -68,21 +97,33 @@ public abstract class MinecraftServerMixin {
             this.lootManager = AntiResourceReload.lootManager;
             this.commandFunctionManager = AntiResourceReload.commandFunctionManager;
             this.advancementLoader = AntiResourceReload.advancementLoader;
-            if (AntiResourceReload.hasSeenRecipes) {
-                ((RecipeManagerAccess) this.recipeManager).invokeApply(AntiResourceReload.recipes, null, null);
-            }
 
             // should only be the vanilla pack
             // logic taken from MinecraftServer#reloadDataPacks
             List<ResourcePackProfile> list = Lists.newArrayList(this.dataPackManager.getEnabledProfiles());
 
             for (ResourcePackProfile resourcePackProfile : this.dataPackManager.getProfiles()) {
-                if (!levelProperties.getDisabledDataPacks().contains(resourcePackProfile.getName()) && !list.contains(resourcePackProfile)) {
+                if (!properties.getDisabledDataPacks().contains(resourcePackProfile.getName()) && !list.contains(resourcePackProfile)) {
                     LOGGER.info("Found new data pack {}, loading it automatically", resourcePackProfile.getName());
                     resourcePackProfile.getInitialPosition().insert(list, resourcePackProfile, profile -> profile, false);
                 }
             }
             this.dataPackManager.setEnabledProfiles(list);
         }
+    }
+
+    @WrapWithCondition(
+            method = "loadWorldDataPacks",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/server/MinecraftServer;method_24154()V"
+            )
+    )
+    private boolean skipInitializingShapeCache(MinecraftServer server) {
+        if (!AntiResourceReload.hasInitializedShapeCache) {
+            AntiResourceReload.hasInitializedShapeCache = true;
+            return true;
+        }
+        return false;
     }
 }

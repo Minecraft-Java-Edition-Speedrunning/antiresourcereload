@@ -14,12 +14,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Map;
 
 @Mixin(RecipeManager.class)
-public class RecipeManagerMixin {
+public abstract class RecipeManagerMixin {
+
     @Inject(
             method = "apply(Ljava/util/Map;Lnet/minecraft/resource/ResourceManager;Lnet/minecraft/util/profiler/Profiler;)V",
             at = @At("HEAD")
     )
-    private void antiresourcereload_setRecipes(Map<Identifier, JsonElement> map, ResourceManager resourceManager, Profiler profiler, CallbackInfo ci) {
+    private void setRecipes(Map<Identifier, JsonElement> map, ResourceManager resourceManager, Profiler profiler, CallbackInfo ci) {
         if (AntiResourceReload.dataManager != null && AntiResourceReload.recipeManager == null) {
             AntiResourceReload.recipes = map;
         }
