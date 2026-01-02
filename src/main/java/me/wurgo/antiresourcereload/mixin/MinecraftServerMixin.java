@@ -46,7 +46,7 @@ public abstract class MinecraftServerMixin {
             this.reloadDataPacks(levelProperties);
             return;
         }
-        
+
         if (AntiResourceReload.dataManager == null) {
             AntiResourceReload.log("Cached resources unavailable, reloading & caching.");
             AntiResourceReload.dataManager = this.dataManager;
@@ -78,7 +78,17 @@ public abstract class MinecraftServerMixin {
                     resourcePackProfile.getInitialPosition().insert(list, resourcePackProfile, profile -> profile, false);
                 }
             }
+
             this.dataPackContainerManager.setEnabledProfiles(list);
+
+            levelProperties.getEnabledDataPacks().clear();
+            levelProperties.getDisabledDataPacks().clear();
+            this.dataPackContainerManager.getEnabledProfiles().forEach(profile -> levelProperties.getEnabledDataPacks().add(profile.getName()));
+            this.dataPackContainerManager.getProfiles().forEach(profile -> {
+                if (!this.dataPackContainerManager.getEnabledProfiles().contains(profile)) {
+                    levelProperties.getDisabledDataPacks().add(profile.getName());
+                }
+            });
         }
     }
 }
