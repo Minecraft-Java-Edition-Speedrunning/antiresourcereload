@@ -108,7 +108,17 @@ public abstract class MinecraftServerMixin {
                     resourcePackProfile.getInitialPosition().insert(list, resourcePackProfile, profile -> profile, false);
                 }
             }
+
             this.dataPackManager.setEnabledProfiles(list);
+
+            properties.getEnabledDataPacks().clear();
+            properties.getDisabledDataPacks().clear();
+            this.dataPackManager.getEnabledProfiles().forEach(profile -> properties.getEnabledDataPacks().add(profile.getName()));
+            this.dataPackManager.getProfiles().forEach(profile -> {
+                if (!this.dataPackManager.getEnabledProfiles().contains(profile)) {
+                    properties.getDisabledDataPacks().add(profile.getName());
+                }
+            });
         }
     }
 
